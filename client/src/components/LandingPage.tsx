@@ -1,4 +1,4 @@
-import { MessageCircle, Zap, Shield, TrendingUp, CheckCircle, Sparkles, Bot, Clock, ArrowRight, Star, Users, BarChart3 } from 'lucide-react';
+import { Sparkles, Clock, BarChart3 } from 'lucide-react';
 
 function LandingPage() {
     return (
