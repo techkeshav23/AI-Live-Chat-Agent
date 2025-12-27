@@ -51,6 +51,7 @@ class GeminiService implements ILLMService {
   private genAI: GoogleGenerativeAI;
   private model: any;
   private modelName: string;
+  private readonly defaultModel = 'gemini-3-flash-preview';
   private maxRetries: number = 3;
   private retryDelay: number = 10000; // 10 second base delay to cross rate limit windows
   private timeout: number = 30000; // 30 second timeout for API calls
@@ -64,14 +65,11 @@ class GeminiService implements ILLMService {
 
     // Using Gemini 3 Flash Preview - latest preview model
     // Can be overridden via GEMINI_MODEL env var for testing other models
-    this.modelName = process.env.GEMINI_MODEL || 'gemini-3-flash-preview';
+    this.modelName = process.env.GEMINI_MODEL || this.defaultModel;
 
     this.genAI = new GoogleGenerativeAI(apiKey);
-    
-    this.model = this.genAI.getGenerativeModel({
-      model: this.modelName,
-      systemInstruction: SYSTEM_INSTRUCTION,
-    });
+
+    this.model = this.createModel(this.modelName);
 
     console.log(`[Gemini Service] Using model: ${this.modelName}`);
   }
@@ -126,6 +124,15 @@ class GeminiService implements ILLMService {
         };
       } catch (error: any) {
         const isRateLimit = error.status === 429 || error.message?.includes('429') || error.message?.includes('quota');
+
+        // If the configured model is invalid in prod, fall back to the known-good default
+        if (error.status === 404 && this.modelName !== this.defaultModel) {
+          console.warn(`[Gemini Service] Model ${this.modelName} not found. Falling back to ${this.defaultModel}`);
+          this.modelName = this.defaultModel;
+          this.model = this.createModel(this.modelName);
+          // Retry immediately with the fallback model
+          continue;
+        }
         
         // Handle rate limiting with retry
         if (isRateLimit && attempt < this.maxRetries) {
@@ -185,6 +192,16 @@ class GeminiService implements ILLMService {
       role: (msg.role === 'ai' ? 'model' : msg.role) as 'user' | 'model',
       parts: [{ text: msg.text }],
     }));
+  }
+
+  /**
+   * Helper to create a configured model instance
+   */
+  private createModel(modelName: string) {
+    return this.genAI.getGenerativeModel({
+      model: modelName,
+      systemInstruction: SYSTEM_INSTRUCTION,
+    });
   }
 }
 
