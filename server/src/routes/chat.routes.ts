@@ -1,21 +1,35 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import prisma from '../lib/prisma';
-import geminiService from '../services/gemini.service';
+import chatService from '../services/chat.service';
+import { createRateLimitMiddleware, chatRateLimitConfig } from '../middleware/rateLimiter';
 
 const router = Router();
 
-// Zod validation schema
+// Error codes for frontend to display specific messages
+const ERROR_CODES = {
+  RATE_LIMIT: 'RATE_LIMIT',
+  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
+  TIMEOUT: 'TIMEOUT',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  UNKNOWN: 'UNKNOWN',
+} as const;
+
+// Zod validation schema - also trims whitespace
 const chatMessageSchema = z.object({
-  message: z.string().min(1, 'Message cannot be empty').max(2000, 'Message too long'),
+  message: z
+    .string()
+    .transform((val) => val.trim())
+    .refine((val) => val.length > 0, { message: 'Message cannot be empty' })
+    .refine((val) => val.length <= 2000, { message: 'Message too long (max 2000 characters)' }),
   sessionId: z.string().uuid('Invalid session ID format'),
 });
 
 /**
  * POST /api/chat/message
  * Send a message and get AI response
+ * Rate limited: 20 requests per minute per session
  */
-router.post('/message', async (req: Request, res: Response) => {
+router.post('/message', createRateLimitMiddleware(chatRateLimitConfig), async (req: Request, res: Response) => {
   try {
     // Validate request body with Zod
     const validationResult = chatMessageSchema.safeParse(req.body);
@@ -23,80 +37,47 @@ router.post('/message', async (req: Request, res: Response) => {
     if (!validationResult.success) {
       return res.status(400).json({
         error: 'Validation failed',
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
         details: validationResult.error.errors,
       });
     }
 
     const { message, sessionId } = validationResult.data;
 
-    // Find or create conversation
-    let conversation = await prisma.conversation.findUnique({
-      where: { sessionId },
-      include: { messages: { orderBy: { createdAt: 'asc' } } },
-    });
+    // Use chat service to process message
+    const response = await chatService.processMessage(sessionId, message);
 
-    if (!conversation) {
-      conversation = await prisma.conversation.create({
-        data: { sessionId },
-        include: { messages: true },
-      });
-    }
-
-    // Format conversation history for Gemini
-    const history = geminiService.formatHistoryForGemini(
-      conversation.messages.map((msg: { role: string; text: string }) => ({
-        role: msg.role,
-        text: msg.text,
-      }))
-    );
-
-    // Generate AI response
-    const { reply, tokensUsed, responseTime } = await geminiService.generateReply(
-      history,
-      message
-    );
-
-    // Persist user message and AI response in database
-    const [userMessage, modelMessage] = await prisma.$transaction([
-      prisma.message.create({
-        data: {
-          conversationId: conversation.id,
-          role: 'user',
-          text: message,
-        },
-      }),
-      prisma.message.create({
-        data: {
-          conversationId: conversation.id,
-          role: 'model',
-          text: reply,
-        },
-      }),
-    ]);
-
-    // Return response with performance metrics
-    return res.status(200).json({
-      message: reply,
-      messageId: modelMessage.id,
-      metadata: {
-        tokensUsed,
-        responseTime,
-      },
-    });
+    return res.status(200).json(response);
   } catch (error: any) {
     console.error('[Chat API] Error:', error);
 
-    // Handle specific error types
-    if (error.message === 'RATE_LIMIT_EXCEEDED') {
-      return res.status(429).json({ error: 'Service temporarily unavailable' });
+    // Handle specific error types with error codes for frontend
+    if (error.message?.includes('RATE_LIMIT')) {
+      return res.status(429).json({
+        error: 'Too many requests. Please wait a moment and try again.',
+        errorCode: ERROR_CODES.RATE_LIMIT,
+      });
     }
 
-    if (error.message === 'MODEL_NOT_FOUND' || error.message === 'AI_SERVICE_ERROR') {
-      return res.status(503).json({ error: 'Service temporarily unavailable' });
+    if (error.message?.includes('timed out') || error.message?.includes('TIMEOUT')) {
+      return res.status(504).json({
+        error: 'Request timed out. Please try again.',
+        errorCode: ERROR_CODES.TIMEOUT,
+      });
+    }
+
+    if (error.message?.includes('MODEL_NOT_FOUND') || error.message?.includes('AI_SERVICE_ERROR')) {
+      return res.status(503).json({
+        error: 'AI service is temporarily unavailable. Please try again later.',
+        errorCode: ERROR_CODES.SERVICE_UNAVAILABLE,
+      });
     }
 
     // Generic error response
-    return res.status(500).json({ error: 'Service temporarily unavailable' });
+    return res.status(500).json({
+      error: 'Something went wrong. Please try again.',
+      errorCode: ERROR_CODES.UNKNOWN,
+    });
   }
 });
 
@@ -115,37 +96,17 @@ router.get('/history/:sessionId', async (req: Request, res: Response) => {
     if (!validationResult.success) {
       return res.status(400).json({
         error: 'Invalid session ID format',
+        errorCode: ERROR_CODES.VALIDATION_ERROR,
       });
     }
 
-    const conversation = await prisma.conversation.findUnique({
-      where: { sessionId },
-      include: {
-        messages: {
-          orderBy: { createdAt: 'asc' },
-          select: {
-            id: true,
-            role: true,
-            text: true,
-            createdAt: true,
-          },
-        },
-      },
-    });
-
-    if (!conversation) {
-      return res.status(200).json({
-        messages: [],
-      });
-    }
-
-    return res.status(200).json({
-      messages: conversation.messages,
-    });
+    const history = await chatService.getHistory(sessionId);
+    return res.status(200).json(history);
   } catch (error) {
     console.error('[Chat API] Error fetching history:', error);
     return res.status(500).json({
       error: 'Failed to fetch conversation history',
+      errorCode: ERROR_CODES.UNKNOWN,
     });
   }
 });

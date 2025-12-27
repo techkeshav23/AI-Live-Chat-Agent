@@ -22,7 +22,7 @@ Guidelines:
 - If you don't know something, acknowledge it and offer to escalate to a human agent`;
 
 interface ChatMessage {
-  role: 'user' | 'model';
+  role: 'user' | 'model'; // Gemini API uses 'model', we map from 'ai'
   parts: { text: string }[];
 }
 
@@ -32,12 +32,28 @@ interface GenerateReplyResult {
   responseTime: number;
 }
 
-class GeminiService {
+/**
+ * Interface for LLM services - allows easy swapping between providers
+ * Implement this interface to add support for OpenAI, Anthropic, etc.
+ */
+export interface ILLMService {
+  generateReply(
+    history: ChatMessage[],
+    userMessage: string
+  ): Promise<GenerateReplyResult>;
+  
+  formatHistoryForGemini(
+    messages: Array<{ role: string; text: string }>
+  ): ChatMessage[];
+}
+
+class GeminiService implements ILLMService {
   private genAI: GoogleGenerativeAI;
   private model: any;
   private modelName: string;
   private maxRetries: number = 3;
   private retryDelay: number = 10000; // 10 second base delay to cross rate limit windows
+  private timeout: number = 30000; // 30 second timeout for API calls
 
   constructor() {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -46,8 +62,8 @@ class GeminiService {
       throw new Error('GEMINI_API_KEY is not set in environment variables');
     }
 
-    // Using gemini-3-flash-preview - Gemini 3 with available quota
-    // Verified working model from API (not gemini-3-flash)
+    // Using Gemini 3 Flash Preview - latest preview model
+    // Can be overridden via GEMINI_MODEL env var for testing other models
     this.modelName = process.env.GEMINI_MODEL || 'gemini-3-flash-preview';
 
     this.genAI = new GoogleGenerativeAI(apiKey);
@@ -84,8 +100,12 @@ class GeminiService {
           },
         });
 
-        // Send the user message and get response
-        const result = await chat.sendMessage(userMessage);
+        // Send the user message and get response (with timeout)
+        const result = await this.withTimeout<{ response: any }>(
+          chat.sendMessage(userMessage),
+          this.timeout,
+          'Gemini API request timed out'
+        );
         const response = await result.response;
         const reply = response.text();
 
@@ -142,13 +162,27 @@ class GeminiService {
   }
 
   /**
+   * Timeout wrapper for API calls
+   * @param promise - The promise to wrap
+   * @param ms - Timeout in milliseconds
+   * @param message - Error message on timeout
+   */
+  private withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+    const timeout = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(message)), ms);
+    });
+    return Promise.race([promise, timeout]);
+  }
+
+  /**
    * Convert database messages to Gemini chat format
    * @param messages - Database messages
    * @returns Formatted chat history for Gemini
    */
   formatHistoryForGemini(messages: Array<{ role: string; text: string }>): ChatMessage[] {
     return messages.map((msg) => ({
-      role: msg.role as 'user' | 'model',
+      // Map 'ai' (our DB) to 'model' (Gemini API format)
+      role: (msg.role === 'ai' ? 'model' : msg.role) as 'user' | 'model',
       parts: [{ text: msg.text }],
     }));
   }

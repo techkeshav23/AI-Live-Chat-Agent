@@ -1,24 +1,25 @@
 # 🚀 Apex - AI Customer Engagement Platform
 
-A production-ready Mini AI Support Agent built with **Gemini 1.5 Flash API** for intelligent customer engagement. This project uses **Neon** (serverless PostgreSQL) and demonstrates a modern full-stack architecture with TypeScript, React, and Prisma ORM.
+A production-ready Mini AI Support Agent built with **Google Gemini 3 Flash Preview API** for intelligent customer engagement. This project uses **Neon** (serverless PostgreSQL) and demonstrates a modern full-stack architecture with TypeScript, React, and Prisma ORM.
 
-> **Quick Setup**: Using Neon (serverless PostgreSQL) + Gemini 1.5 Flash API
+> **Quick Setup**: Using Neon (serverless PostgreSQL) + Gemini 3 Flash Preview API
 
 ## 🎯 Project Overview
 
-**Apex** is an AI-powered customer engagement platform that provides instant, intelligent support through a clean chat interface. Built as a technical demonstration of integrating Google's Gemini 1.5 Flash model into a real-world application.
+**Apex** is an AI-powered customer engagement platform that provides instant, intelligent support through a clean chat interface. Built as a technical demonstration of integrating Google's Gemini 3 Flash Preview model into a real-world application.
 
-### Why Gemini 1.5 Flash?
+### Why Gemini 3 Flash Preview?
 
 - **Low Latency**: Sub-second response times for snappy user experience
 - **High Context Window**: Maintains conversation history effectively
 - **Cost Efficient**: Optimal for "boring but profitable" automation at scale
 - **Modern API**: Clean integration with system instructions for domain knowledge
+- **Latest Model**: Access to Google's newest Gemini 3 capabilities
 
 ## ✨ Key Features
 
 ### Backend
-- ✅ **Gemini 1.5 Flash Integration** with system instructions for e-commerce domain knowledge
+- ✅ **Gemini 3 Flash Preview Integration** with system instructions for e-commerce domain knowledge
 - ✅ **Neon (Serverless PostgreSQL) + Prisma ORM** for persistent conversation storage
 - ✅ **Zod Validation** for type-safe API requests
 - ✅ **Rate Limit Handling** with graceful error responses
@@ -42,7 +43,7 @@ A production-ready Mini AI Support Agent built with **Gemini 1.5 Flash API** for
 - **Language**: TypeScript
 - **Database**: PostgreSQL (Neon Serverless)
 - **ORM**: Prisma
-- **LLM**: Google Gemini 1.5 Flash API (@google/generative-ai)
+- **LLM**: Google Gemini 3 Flash Preview API (@google/generative-ai)
 - **Validation**: Zod
 
 ### Frontend
@@ -88,27 +89,14 @@ Apex-ai-platform/
 
 ## 🚀 Quick Start
 
-> **⚡ Fast Track**: See [SETUP.md](SETUP.md) for a 5-minute step-by-step guide!
-> 
-> **📋 Checklist**: Use [CHECKLIST.md](CHECKLIST.md) to track your progress
-> 
-> **🔧 Issues?**: Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for solutions
-
 ### Prerequisites
 
 - Node.js 18+ and npm
 - Neon database account ([Sign up free](https://neon.tech))
-- Google Gemini 1.5 Flash API key ([Get one here](https://aistudio.google.com/app/apikey))
+- Google Gemini API key ([Get one here](https://aistudio.google.com/app/apikey))
 
 ### 1. Clone & Install
 
-**Option A: Automated Setup (Recommended for Windows)**
-```powershell
-# Run the setup wizard
-.\setup.ps1
-```
-
-**Option B: Manual Setup**
 ```bash
 # Install root dependencies
 npm install
@@ -139,7 +127,7 @@ Edit `server/.env`:
 ```env
 # Your Neon connection string (includes SSL by default)
 DATABASE_URL="postgresql://username:password@ep-xxx-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require"
-GEMINI_API_KEY="your_gemini_1.5_flash_api_key_here"
+GEMINI_API_KEY="your_gemini_api_key_here"
 PORT=3000
 NODE_ENV=development
 CLIENT_URL="http://localhost:5173"
@@ -200,10 +188,10 @@ Instead of passing domain knowledge as a simple string prompt, I use Gemini's **
 - Cleaner separation of concerns
 - Better consistency across conversations
 
-### Gemini 1.5 Flash Choice
+### Gemini 3 Flash Preview Choice
 - **Speed**: Average response time < 1s (measured in logs)
-- **Context**: 1M token context window handles long conversations
-- **Cost**: ~10x cheaper than GPT-4 for production scale
+- **Context**: Large context window handles long conversations
+- **Cost**: Cost-efficient for production scale
 
 ### Founding Engineer Mindset
 - **Performance Logging**: Track token usage and response times
@@ -227,7 +215,8 @@ Send a message and receive AI response.
 **Response:**
 ```json
 {
-  "message": "We offer a 30-day return window...",
+  "reply": "We offer a 30-day return window...",
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
   "messageId": "clx123abc",
   "metadata": {
     "tokensUsed": 42,
@@ -263,7 +252,7 @@ Retrieve conversation history.
 
 ### Server (.env)
 - `DATABASE_URL`: Neon PostgreSQL connection string (includes SSL by default)
-- `GEMINI_API_KEY`: Google Gemini 1.5 Flash API key
+- `GEMINI_API_KEY`: Google Gemini API key
 - `PORT`: Server port (default: 3000)
 - `NODE_ENV`: Environment (development/production)
 - `CLIENT_URL`: Frontend URL for CORS
@@ -289,6 +278,69 @@ Retrieve conversation history.
 - [ ] A/B testing framework for prompt optimization
 - [ ] Analytics dashboard for engagement metrics
 
+## 🤖 LLM Notes
+
+### Provider
+**Google Gemini 3 Flash Preview** via `@google/generative-ai` SDK
+
+### Prompting Strategy
+I use Gemini's **System Instructions** feature (not regular prompts) to inject domain knowledge:
+
+```
+You are a professional customer support agent for "Apex", an AI-powered customer engagement platform.
+
+Domain Knowledge:
+- Shipping: Standard shipping takes 3-5 business days
+- Returns: We offer a 30-day return window for all products
+- Support Hours: Monday-Friday, 9 AM - 6 PM PST
+- Brand Voice: Professional, concise, helpful, and friendly
+
+Guidelines:
+- Always maintain the "Apex" brand voice
+- Provide accurate information based on the domain knowledge above
+- Be empathetic and solution-oriented
+- Keep responses concise but complete
+- If you don't know something, acknowledge it and offer to escalate to a human agent
+```
+
+### Why System Instructions over Regular Prompts?
+- **More reliable**: System instructions are treated differently by the model
+- **Cleaner code**: No need to prepend context to every message
+- **Better separation**: Domain knowledge is separate from conversation history
+
+### Token/Cost Control
+- `maxOutputTokens: 500` - Caps response length
+- Conversation history included for context (but could be truncated for very long chats)
+
+---
+
+## ⚖️ Trade-offs & "If I Had More Time..."
+
+### Trade-offs Made
+
+| Decision | Trade-off | Reason |
+|----------|-----------|--------|
+| React over Svelte | Not their preferred framework | Faster development with familiar tooling |
+| Gemini over OpenAI/Claude | Less established than GPT-4 | Free tier, fast responses, good enough for demo |
+| No Redis caching | Slower repeated queries | Simplicity; DB is fast enough for demo scale |
+| No authentication | Anyone can chat | Assignment said "no auth required" |
+| No streaming responses | User waits for full response | Simpler implementation; sub-second anyway |
+
+### If I Had More Time...
+
+1. **Streaming Responses** - Show AI response as it's generated (better UX for longer replies)
+2. **Redis Caching** - Cache conversation history for faster loads
+3. **Authentication** - User accounts with conversation history across devices
+4. **Testing** - Unit tests for services, integration tests for API endpoints
+5. **Rate Limiting** - Per-user rate limits (not just handling Gemini's limits)
+6. **Analytics Dashboard** - Track popular questions, response times, user satisfaction
+7. **Multi-channel Support** - Abstract the chat interface for WhatsApp/Instagram integration
+8. **Prompt A/B Testing** - Framework to test different system prompts
+9. **Fallback Models** - Switch to backup LLM if primary fails
+10. **Docker Compose** - One-command local setup with all dependencies
+
+---
+
 ## 📝 Database Schema
 
 ```prisma
@@ -297,13 +349,14 @@ model Conversation {
   sessionId String   @unique
   messages  Message[]
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Message {
   id             String       @id @default(cuid())
   conversationId String
   conversation   Conversation @relation(...)
-  role           String       // 'user' or 'model'
+  role           String       // 'user' or 'ai'
   text           String       @db.Text
   createdAt      DateTime     @default(now())
 }
@@ -320,15 +373,6 @@ This is a demonstration project for the Apex technical assignment. For productio
 ## 📄 License
 
 MIT
-
----
-
-## 📚 Additional Documentation
-
-- **[SETUP.md](SETUP.md)** - 5-minute quick start guide
-- **[CHECKLIST.md](CHECKLIST.md)** - Setup verification checklist  
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues & solutions
-- **[PROJECT_FILES.md](PROJECT_FILES.md)** - Complete file structure reference
 
 ---
 
