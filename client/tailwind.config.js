@@ -7,8 +7,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        'spur-blue': '#2563eb',
-        'spur-blue-dark': '#1e40af',
+        'Apex-blue': '#2563eb',
+        'Apex-blue-dark': '#1e40af',
       },
     },
   },

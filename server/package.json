@@ -1,7 +1,7 @@
 {
-  "name": "spur-server",
+  "name": "Apex-server",
   "version": "1.0.0",
-  "description": "Spur AI Backend Server",
+  "description": "Apex AI Backend Server",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

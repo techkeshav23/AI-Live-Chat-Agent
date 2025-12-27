@@ -55,7 +55,7 @@ app.use((err: Error, req: Request, res: Response, next: any) => {
 app.listen(PORT, () => {
   console.log(`
 ╔═══════════════════════════════════════╗
-║   🚀 Spur AI Server Running           ║
+║   🚀 Apex AI Server Running           ║
 ║   Port: ${PORT}                       ║
 ║   Environment: ${process.env.NODE_ENV || 'development'}           ║
 ╚═══════════════════════════════════════╝

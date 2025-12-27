@@ -1,4 +1,4 @@
-# 🚀 Spur - AI Customer Engagement Platform
+# 🚀 Apex - AI Customer Engagement Platform
 
 A production-ready Mini AI Support Agent built with **Gemini 1.5 Flash API** for intelligent customer engagement. This project uses **Neon** (serverless PostgreSQL) and demonstrates a modern full-stack architecture with TypeScript, React, and Prisma ORM.
 
@@ -6,7 +6,7 @@ A production-ready Mini AI Support Agent built with **Gemini 1.5 Flash API** for
 
 ## 🎯 Project Overview
 
-**Spur** is an AI-powered customer engagement platform that provides instant, intelligent support through a clean chat interface. Built as a technical demonstration of integrating Google's Gemini 1.5 Flash model into a real-world application.
+**Apex** is an AI-powered customer engagement platform that provides instant, intelligent support through a clean chat interface. Built as a technical demonstration of integrating Google's Gemini 1.5 Flash model into a real-world application.
 
 ### Why Gemini 1.5 Flash?
 
@@ -26,7 +26,7 @@ A production-ready Mini AI Support Agent built with **Gemini 1.5 Flash API** for
 - ✅ **RESTful API** with Express.js and TypeScript
 
 ### Frontend
-- ✅ **Clean Chat Widget** with Spur branding (bottom-right floating bubble)
+- ✅ **Clean Chat Widget** with Apex branding (bottom-right floating bubble)
 - ✅ **Session Persistence** via localStorage for conversation continuity
 - ✅ **Markdown Support** using react-markdown for rich AI responses
 - ✅ **Auto-scroll** to latest messages
@@ -55,7 +55,7 @@ A production-ready Mini AI Support Agent built with **Gemini 1.5 Flash API** for
 ## 📁 Project Structure
 
 ```
-spur-ai-platform/
+Apex-ai-platform/
 ├── server/                 # Backend Express app
 │   ├── src/
 │   │   ├── index.ts       # Express server entry point
@@ -311,7 +311,7 @@ model Message {
 
 ## 🤝 Contributing
 
-This is a demonstration project for the Spur technical assignment. For production use, consider:
+This is a demonstration project for the Apex technical assignment. For production use, consider:
 - Adding comprehensive test coverage
 - Implementing CI/CD pipelines
 - Setting up monitoring and alerting
@@ -332,4 +332,4 @@ MIT
 
 ---
 
-**Built with ❤️ for Spur** | Demonstrating clean architecture, modern best practices, and "founding engineer" thinking.
+**Built with ❤️ for Apex** | Demonstrating clean architecture, modern best practices, and "founding engineer" thinking.
