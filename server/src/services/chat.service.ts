@@ -51,7 +51,11 @@ class ChatService {
 
     if (!conversation) {
       conversation = await prisma.conversation.create({
-        data: { sessionId },
+        data: { 
+          sessionId,
+          // Explicitly set updatedAt to satisfy DBs missing default/updatedAt trigger
+          updatedAt: new Date(),
+        },
         include: { messages: true },
       });
     }
